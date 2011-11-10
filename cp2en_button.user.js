@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           クックパッドをEvernoteに送るボタン
-// @namespace      cookpad
+// @namespace      https://github.com/umiiro/gmscripts
 // @include        http://cookpad.com/recipe/*
 // @require        http://static.evernote.com/noteit.js
 // ==/UserScript==
