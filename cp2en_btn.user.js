@@ -24,40 +24,13 @@ function searchTag(tagName, parentNode) {
 	return null;
 }
 
-function addButton() {
-	var img = document.createElement("img");
-	img.setAttribute("src", 'http://static.evernote.com/article-clipper-jp.png');
-	img.setAttribute("alt", 'Evernoteにクリップ');
-
-	var a = document.createElement("a");
-	a.setAttribute("href", '#');
-	a.addEventListener("click", function(){
-		clip.get(function(doc){
-			Evernote.doClip({
-				title: clip.title,
-				suggestTags: 'クックパッド',
-				content: doc.getElementById("print_container")
-			});
-			console.log(doc.body);
-		});
-		return false;
-	});
-	a.appendChild(img);
-
-	var li = document.createElement("li");
-	li.appendChild(a);
-
-	var ul = searchTag("ul", document.getElementById('_footstamp_tools'));
-
-	ul.insertBefore(li, ul.firstChild);
-}
-
 function LazyLoadable() {};
 LazyLoadable.prototype = {
 	get: function(complete) {
 		if (this.args) {
-			complete.apply(this, this.args);
-			return;
+			if (complete) {
+				complete.apply(this, this.args);
+			}
 		} else {
 			var callback = this.callback || [];
 
@@ -82,6 +55,37 @@ LazyLoadable.prototype = {
 			callback[i].apply(this, this.args);
 		}
 	}
+}
+
+function addButton() {
+	var img = document.createElement("img");
+	img.setAttribute("src", 'http://static.evernote.com/article-clipper-jp.png');
+	img.setAttribute("alt", 'Evernoteにクリップ');
+
+	var a = document.createElement("a");
+	a.setAttribute("href", '#');
+	a.addEventListener("click", function(e){
+		clip.get(function(doc){
+			Evernote.doClip({
+				title: clip.title,
+				suggestTags: 'クックパッド',
+				content: doc.getElementById("print_container")
+			});
+			console.log(doc.body);
+		});
+		e.preventDefault();
+	});
+	a.addEventListener("mouseover", function(){
+		clip.get();
+	});
+	a.appendChild(img);
+
+	var li = document.createElement("li");
+	li.appendChild(a);
+
+	var ul = searchTag("ul", document.getElementById('_footstamp_tools'));
+
+	ul.insertBefore(li, ul.firstChild);
 };
 
 var clip = new LazyLoadable();
@@ -93,7 +97,7 @@ clip.onload = function(self) {
 	src = location.pathname.replace("recipe", "recipe/print");
 
 	iframe = document.createElement("iframe");
-	iframe.setAttribute("src", this.src);
+	iframe.setAttribute("src", src);
 	iframe.style.display = "none";
 	iframe.addEventListener("load", function(){
 		var doc = iframe.contentDocument
@@ -105,4 +109,3 @@ clip.onload = function(self) {
 };
 
 addButton();
-clip.get();
