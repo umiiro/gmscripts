@@ -3,22 +3,83 @@
 // @description    クックパッドのレシピにEvernoteでクリップボタンを追加します。
 // @namespace      https://github.com/umiiro/gmscripts
 // @match          http://cookpad.com/recipe/*
+// @run-at         document-end
 // @require        http://static.evernote.com/noteit.js
-// @version        0.1.20111122
+// @version        0.2.20111124
 // ==/UserScript==
+
+var CONFIG = {
+	imgSrc: 'http://static.evernote.com/article-clipper-jp.png',
+	imgAlt: 'Evernoteにクリップ',
+	popup:  [
+		'',
+		'evernoteClipWindow',
+		'width=500,height=480,scrollbars=yes,resizable=yes'
+	],
+	noteit: "http://static.evernote.com/noteit.js",
+}
 
 if (window == window.top) {
 	D().define();
+	addButton();
 }
 
-function uniqid()
-{
-	var newDate = new Date;
-	return newDate.getTime();
+function addButton() {
+	var img, a, li, ul;
+
+	img = document.createElement("img");
+	img.setAttribute("src", CONFIG.imgSrc);
+	img.setAttribute("alt", CONFIG.imgAlt);
+
+	a = document.createElement("a");
+	a.setAttribute("href", '#');
+	a.addEventListener("mouseover", function(){ prepare(); }, false);
+	a.addEventListener("click", clicked, false);
+	a.appendChild(img);
+
+	li = document.createElement("li");
+	li.appendChild(a);
+
+	ul = document.querySelector("#_footstamp_tools>ul");
+	ul.insertBefore(li, ul.firstChild);
+};
+
+function clicked(e) {
+	e.preventDefault();
+
+	window.open.apply(null, CONFIG.popup);
+
+	prepare().next(function(v){
+		invokeClip(v.printable.doc, v.printable.id);
+	});
+}
+
+function invokeClip(doc, id) {
+	if ("Evernote" in window) {
+		exec(doc);
+	} else {
+		contentEval('(' + exec + ')("' + id + '");');
+	}
+
+	function exec(content) {
+		if ("string" == typeof content) {
+			var iframe = document.getElementById(content);
+			content = iframe.contentDocument;
+		}
+
+		var title = document.title.split(/\[.*\]/)[0].trim();
+		var print = content.getElementById("print_container");
+
+		Evernote.doClip({
+			content: print,
+			suggestTags: ['クックパッド'],
+			title: title
+		});
+	}
 }
 
 function prepare() {
-	var head = document.getElementsByTagName("head")[0]
+	var head = document.getElementsByTagName("head")[0],
 	    body = document.body;
 
 	if (prepare.deferred) return prepare.deferred;
@@ -31,13 +92,16 @@ function prepare() {
 
 		    d = new Deferred;
 
-			src = "http://cookpad.com/recipe/print/957016"//location.pathname.replace("recipe", "recipe/print");
+			src = location.pathname.replace("recipe", "recipe/print");
 
 			iframe = document.createElement("iframe");
 			iframe.setAttribute("src", src);
 			id = uniqid();
 			iframe.setAttribute("id", id);
-			iframe.style.display = "none";
+			iframe.style.height = "0";
+			iframe.style.border = "none";
+			iframe.style.padding = "0";
+			iframe.style.margin = "0";
 			iframe.addEventListener("load", function(){
 				prepare.printable = {
 					doc: iframe.contentDocument,
@@ -52,12 +116,12 @@ function prepare() {
 		noteit: function() {
 			var script, d;
 
-			if (prepare.noteit || "Evernote" in window) return null;
+			if (prepare.noteit || "Evernote" in window) { return null; }
 
 			d = new Deferred;
 
 			script = document.createElement("script");
-			script.setAttribute("src", "http://static.evernote.com/noteit.min.js");
+			script.setAttribute("src", CONFIG.noteit);
 			script.addEventListener("load", function(){
 				prepare.noteit = true;
 				d.call();
@@ -74,66 +138,10 @@ function prepare() {
 	return prepare.deferred;
 }
 
-function doClip(doc) {
-	if ("Evernote" in window) {
-		exec(doc.content);
-	} else {
-		contentEval('(' + exec + ')("' + doc.id + '");');
-	}
+function uniqid() { return (new Date).getTime(); }
 
-	function exec(doc) {
-		if ("string" == typeof doc) {
-			var iframe = document.getElementById(doc);
-			doc = iframe.contentDocument;
-		}
 
-		var title = document.title.split(/\[.*\]/)[0].trim();
-		try {
-		var print = doc.getElementById("print_container");
-
-		Evernote.doClip({
-			content: print,
-			suggestTags: 'クックパッド',
-			title: title
-		});
-	}
-}
-
-function addButton() {
-	var img, a, li, ul, d;
-
-	d = new Deferred;
-
-	img = document.createElement("img");
-	img.setAttribute("src", 'http://static.evernote.com/article-clipper-jp.png');
-	img.setAttribute("alt", 'Evernoteにクリップ');
-
-	a = document.createElement("a");
-	a.setAttribute("href", '#');
-	a.addEventListener("click", function(e){
-		prepare().next(function(v){
-			doClip({
-				content: v.printable.doc,
-				id: v.printable.id
-			});
-		});
-		e.preventDefault();
-	}, false);
-	a.addEventListener("mouseover", function() {
-		prepare();
-	}, false);
-	a.appendChild(img);
-
-	li = document.createElement("li");
-	li.appendChild(a);
-
-	ul = document.querySelector("#_footstamp_tools>ul");
-
-	ul.insertBefore(li, ul.firstChild);
-};
-
-// ------------------------------------
-
+/* contentEval */
 function contentEval(source) {
   // Check for function input.
   if ('function' == typeof source) {
@@ -154,8 +162,8 @@ function contentEval(source) {
   document.body.removeChild(script);
 }
 
-// ------------------------------------
 
+/* jsdeferred.userscript.js */
 // Usage:: with (D()) { your code }
 // JSDeferred 0.4.0 Copyright (c) 2007 cho45 ( www.lowreal.net )
 // See http://github.com/cho45/jsdeferred
